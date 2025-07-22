@@ -451,7 +451,14 @@
           leaderboardList.innerHTML = '<li style="color:#888;">Loading...</li>';
           try {
             const res = await fetch('https://script.google.com/macros/s/AKfycbx6Z76rVo0jnHWQKdSsIo0PjNSnw3bitjQjU_ORHrIPRhKUeFcpaCf4YLsaeMJ42TVYAA/exec');
-            let data = await res.json();
+            let data;
+            try {
+              data = await res.json();
+            } catch (jsonErr) {
+              console.error('Failed to parse leaderboard JSON:', jsonErr);
+              leaderboardList.innerHTML = '<li style="color:#c00;">Leaderboard data is not valid JSON.<br>Check Google Apps Script permissions and CORS settings.</li>';
+              return;
+            }
             // If the data is wrapped in a property (e.g. {data: [...]})
             if (data && typeof data === 'object' && !Array.isArray(data)) {
               const keys = Object.keys(data);
@@ -484,7 +491,7 @@
               leaderboardList.innerHTML = '<li style="color:#888;">No valid leaderboard data found. Check console for details.</li>';
             }
           } catch (err) {
-            leaderboardList.innerHTML = '<li style="color:#c00;">Failed to load leaderboard.</li>';
+            leaderboardList.innerHTML = '<li style="color:#c00;">Failed to load leaderboard.<br>' + err + '</li>';
           }
         }
 
