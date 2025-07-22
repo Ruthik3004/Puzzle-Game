@@ -329,12 +329,11 @@
             <div id="puzzle"></div>
         </div>
 
-        <!-- Leaderboard container -->
         <div id="leaderboard">
-          <h3>🏆 Leaderboard</h3>
-          <ol id="leaderboardList">
-            <li style="color:#888">Loading…</li>
-          </ol>
+            <h3>🏆 Leaderboard</h3>
+            <ol id="leaderboardList">
+                <li style="color:#888;">Loading...</li>
+            </ol>
         </div>
     </div>
 
@@ -352,12 +351,6 @@
     </div>
 
     <script>
-        // -------------------------------
-        // CONFIG – put the Web-App URL here
-        // -------------------------------
-        const leaderboardEndpoint =
-          'https://script.google.com/macros/s/AKfycbyvUyJuG5LWqfQWk5Al3FmCjy7gMtMEB8rVf-E8jsGu0oT95iL87VERGWakMGgvogb7Lg/exec';
-
         const puzzle = document.getElementById('puzzle');
         const imageUpload = document.getElementById('imageUpload');
         const shuffleBtn = document.getElementById('shuffleBtn');
@@ -391,54 +384,101 @@
             moves: JSON.parse(sessionStorage.getItem('movesLeaderboard') || '[]')
         };
 
-        // -------------------------------
-        // 1. Fetch & render leaderboard
-        // -------------------------------
-        async function fetchLeaderboard() {
-          const list = document.getElementById('leaderboardList');
-          list.innerHTML = '<li style="color:#888">Loading…</li>';
+        const leaderboardEndpoint = 'https://script.google.com/macros/s/AKfycbx6Z76rVo0jnHWQKdSsIo0PjNSnw3bitjQjU_ORHrIPRhKUeFcpaCf4YLsaeMJ42TVYAA/exec';
+
+        // Submit player score to Google Sheets
+        async function submitScore(name, moves, time) {
           try {
-            const res  = await fetch(leaderboardEndpoint);
-            const data = await res.json();   // [{name,time,moves}, …]
-
-            // sort: fastest time first, then lowest moves
-            data.sort((a,b)=> a.time - b.time || a.moves - b.moves);
-
-            list.innerHTML = '';
-            data.slice(0,10).forEach((row,i)=>{
-              list.insertAdjacentHTML(
-                'beforeend',
-                `<li>${i+1}. ${row.name} – ⏱️ ${row.time}s, 🎯 ${row.moves} moves</li>`
-              );
+            await fetch(leaderboardEndpoint, {
+              method: 'POST',
+              mode: 'no-cors', // optional: skip CORS errors for testing
+              headers:
+                {
+                  'Content-Type': 'application/json'
+                },
+              body: JSON.stringify({ name, moves, time })
             });
-            if (!data.length) list.innerHTML = '<li style="color:#888">No scores yet.</li>';
+            console.log("Score submitted.");
+            fetchLeaderboard(); // refresh
+          } catch (error) {
+            console.error("Failed to submit score:", error);
+          }
+        }
+
+        // Submit player data to Google Sheet using fetch API
+        async function submitScoreToGoogleSheet(name, time, moves) {
+          await fetch("https://script.google.com/macros/s/AKfycbx6Z76rVo0jnHWQKdSsIo0PjNSnw3bitjQjU_ORHrIPRhKUeFcpaCf4YLsaeMJ42TVYAA/exec", {
+            method: "POST",
+            mode: "no-cors", // required for localhost without CORS error
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ name, time, moves })
+          });
+        }
+
+        // --- Leaderboard Sorting and Display ---
+        // Remove old leaderboard table and sort buttons if present
+        const leaderboardTable = document.getElementById('dynamicLeaderboardTable');
+        if (leaderboardTable) leaderboardTable.remove();
+        const leaderboardSortDiv = document.getElementById('leaderboardSortDiv');
+        if (leaderboardSortDiv) leaderboardSortDiv.remove();
+        // Remove any old leaderboard <tbody> if present
+        const oldTbody = document.getElementById('dynamicLeaderboardBody');
+        if (oldTbody && oldTbody.parentElement) oldTbody.parentElement.remove();
+
+        // Create <ol id="leaderboardList"> if not present
+        let leaderboardList = document.getElementById('leaderboardList');
+        if (!leaderboardList) {
+          leaderboardList = document.createElement('ol');
+          leaderboardList.id = 'leaderboardList';
+          leaderboardList.style.textAlign = 'left';
+          leaderboardList.style.margin = '0 auto';
+          leaderboardList.style.padding = '0 0 0 1.5em';
+          leaderboardList.style.fontSize = '17px';
+          leaderboardList.style.background = '#f8f9fa';
+          leaderboardList.style.borderRadius = '8px';
+          leaderboardList.style.minHeight = '40px';
+          leaderboardList.style.maxWidth = '350px';
+          leaderboardList.style.marginTop = '10px';
+          const leaderboardDiv = document.getElementById('leaderboard');
+          leaderboardDiv.appendChild(leaderboardList);
+        }
+
+        // Fetch, sort, and display leaderboard (CORS proxy version)
+        async function fetchLeaderboard() {
+          const leaderboardList = document.getElementById('leaderboardList');
+          leaderboardList.innerHTML = '<li style="color:#888;">Loading...</li>';
+          try {
+            const res = await fetch("https://corsproxy.io/?" + encodeURIComponent(leaderboardEndpoint));
+            const data = await res.json();
+            // Defensive: filter out incomplete rows
+            const filtered = data.filter(row => (row.name || row.Name) && (row.time || row.Time) && (row.moves || row.Moves));
+            // Sort by time (number, ascending), then moves (ascending)
+            filtered.sort((a, b) => {
+              const tA = Number(a.time || a.Time);
+              const tB = Number(b.time || b.Time);
+              if (tA !== tB) return tA - tB;
+              return Number(a.moves || a.Moves) - Number(b.moves || b.Moves);
+            });
+            leaderboardList.innerHTML = '';
+            filtered.slice(0, 10).forEach((row, i) => {
+              const name = row.name || row.Name || 'Anonymous';
+              const time = Number(row.time || row.Time);
+              const moves = Number(row.moves || row.Moves);
+              leaderboardList.innerHTML += `<li>${i + 1}. ${name} - ⏱️ ${time}s, 🎯 ${moves} moves</li>`;
+            });
+            if (filtered.length === 0) {
+              leaderboardList.innerHTML = '<li style="color:#888;">No records yet.</li>';
+            }
           } catch (err) {
-            list.innerHTML = '<li style="color:#c00">Failed to load leaderboard.</li>';
+            leaderboardList.innerHTML = '<li style="color:#c00;">Failed to load leaderboard.</li>';
             console.error(err);
           }
         }
 
-        // -------------------------------
-        // 2. Submit a new score
-        // -------------------------------
-        async function submitScore(name, moves, time) {
-          try {
-            await fetch(leaderboardEndpoint, {
-              method : 'POST',
-              body   : JSON.stringify({ name, moves, time }),
-              headers: { 'Content-Type': 'application/json' }
-            });
-          } catch (err) {
-            console.error('Score not saved:', err);
-          }
-          // refresh list
-          fetchLeaderboard();
-        }
-
-        // -------------------------------
-        // 3. Auto-load on page load
-        // -------------------------------
-        window.addEventListener('load', fetchLeaderboard);
+        // Call fetchLeaderboard on page load
+        fetchLeaderboard();
 
         function initPuzzle() {
             gridSize = parseInt(difficultySelect.value);
@@ -684,6 +724,31 @@
                 .catch(err => console.error('Error saving:', err));
         }
 
+        function fetchLeaderboard() {
+            fetch('https://script.google.com/macros/s/AKfycbx6Z76rVo0jnHWQKdSsIo0PjNSnw3bitjQjU_ORHrIPRhKUeFcpaCf4YLsaeMJ42TVYAA/exec')
+                .then(response => response.json())
+                .then(data => {
+                    const sorted = data.sort((a, b) => {
+                        const timeA = timeToSeconds(a.time);
+                        const timeB = timeToSeconds(b.time);
+                        return timeA - timeB || a.moves - b.moves;
+                    });
+
+                    const tbody = document.getElementById("leaderboardBody");
+                    tbody.innerHTML = "";
+                    sorted.slice(0, 10).forEach((row, i) => {
+                        const tr = document.createElement("tr");
+                        tr.innerHTML = `
+          <td>${i + 1}</td>
+          <td>${row.name}</td>
+          <td>${row.time}</td>
+          <td>${row.moves}</td>
+        `;
+                        tbody.appendChild(tr);
+                    });
+                });
+        }
+
         toggleImageBtn.addEventListener('click', () => {
             originalImage.style.display = originalImage.style.display === 'none' ? 'block' : 'none';
         });
@@ -736,6 +801,11 @@
                 shuffleTiles();
             }
         });
+
+        // Initialize leaderboards on page load
+        // updateLeaderboards();
+        // Fetch Google Sheets leaderboard on page load
+        fetchLeaderboard();
     </script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
 </body>
