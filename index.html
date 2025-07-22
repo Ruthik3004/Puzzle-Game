@@ -451,25 +451,37 @@
           leaderboardList.innerHTML = '<li style="color:#888;">Loading...</li>';
           try {
             const res = await fetch('https://script.google.com/macros/s/AKfycbx6Z76rVo0jnHWQKdSsIo0PjNSnw3bitjQjU_ORHrIPRhKUeFcpaCf4YLsaeMJ42TVYAA/exec');
-            const data = await res.json();
+            let data = await res.json();
+            // If the data is wrapped in a property (e.g. {data: [...]})
+            if (data && typeof data === 'object' && !Array.isArray(data)) {
+              const keys = Object.keys(data);
+              if (keys.length === 1 && Array.isArray(data[keys[0]])) {
+                data = data[keys[0]];
+              }
+            }
+            // Debug: log the data and the first row's keys
+            console.log('Leaderboard raw data:', data);
+            if (Array.isArray(data) && data.length > 0) {
+              console.log('First row keys:', Object.keys(data[0]));
+            }
             // Defensive: filter out incomplete rows
-            const filtered = data.filter(row => (row.name || row.Name) && (row.time || row.Time) && (row.moves || row.Moves));
+            const filtered = (Array.isArray(data) ? data : []).filter(row => (row.Name || row.name || row["Name"] || row["name"]) && (row.Time || row.time || row["Time"] || row["time"]) && (row.Moves || row.moves || row["Moves"] || row["moves"]));
             // Sort by time (number, ascending), then moves (ascending)
             filtered.sort((a, b) => {
-              const tA = Number(a.time || a.Time);
-              const tB = Number(b.time || b.Time);
+              const tA = Number(a.Time || a.time || a["Time"] || a["time"]);
+              const tB = Number(b.Time || b.time || b["Time"] || b["time"]);
               if (tA !== tB) return tA - tB;
-              return Number(a.moves || a.Moves) - Number(b.moves || b.Moves);
+              return Number(a.Moves || a.moves || a["Moves"] || a["moves"]) - Number(b.Moves || b.moves || b["Moves"] || b["moves"]);
             });
             leaderboardList.innerHTML = '';
             filtered.slice(0, 10).forEach((row, i) => {
-              const name = row.name || row.Name || 'Anonymous';
-              const time = Number(row.time || row.Time);
-              const moves = Number(row.moves || row.Moves);
+              const name = row.Name || row.name || row["Name"] || row["name"] || 'Anonymous';
+              const time = Number(row.Time || row.time || row["Time"] || row["time"]);
+              const moves = Number(row.Moves || row.moves || row["Moves"] || row["moves"]);
               leaderboardList.innerHTML += `<li>${i + 1}. ${name} - ⏱️ ${time}s, 🎯 ${moves} moves</li>`;
             });
             if (filtered.length === 0) {
-              leaderboardList.innerHTML = '<li style="color:#888;">No records yet.</li>';
+              leaderboardList.innerHTML = '<li style="color:#888;">No valid leaderboard data found. Check console for details.</li>';
             }
           } catch (err) {
             leaderboardList.innerHTML = '<li style="color:#c00;">Failed to load leaderboard.</li>';
@@ -721,31 +733,6 @@
                     fetchLeaderboard(); // Refresh leaderboard after save
                 })
                 .catch(err => console.error('Error saving:', err));
-        }
-
-        function fetchLeaderboard() {
-            fetch('https://script.google.com/macros/s/AKfycbx6Z76rVo0jnHWQKdSsIo0PjNSnw3bitjQjU_ORHrIPRhKUeFcpaCf4YLsaeMJ42TVYAA/exec')
-                .then(response => response.json())
-                .then(data => {
-                    const sorted = data.sort((a, b) => {
-                        const timeA = timeToSeconds(a.time);
-                        const timeB = timeToSeconds(b.time);
-                        return timeA - timeB || a.moves - b.moves;
-                    });
-
-                    const tbody = document.getElementById("leaderboardBody");
-                    tbody.innerHTML = "";
-                    sorted.slice(0, 10).forEach((row, i) => {
-                        const tr = document.createElement("tr");
-                        tr.innerHTML = `
-          <td>${i + 1}</td>
-          <td>${row.name}</td>
-          <td>${row.time}</td>
-          <td>${row.moves}</td>
-        `;
-                        tbody.appendChild(tr);
-                    });
-                });
         }
 
         toggleImageBtn.addEventListener('click', () => {
