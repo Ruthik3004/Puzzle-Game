@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>🧩 Let's Solve a Colorful Puzzle!</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(120deg, #f6d365, #fda085);
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+        }
+
+        h2 {
+            margin-bottom: 20px;
+            font-size: 32px;
+            color: #fff;
+            text-shadow: 0 0 5px rgba(0, 0, 0, 0.4);
+            animation: glow 2s infinite alternate;
+        }
+
+        @keyframes glow {
+            from {
+                text-shadow: 0 0 5px #fff;
+            }
+
+            to {
+                text-shadow: 0 0 20px #fff, 0 0 10px #ffb347;
+            }
+        }
+
+        #controls {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        select,
+        input[type="file"],
+        input[type="text"],
+        button {
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: none;
+            font-size: 15px;
+            background: #fff;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        input[type="text"] {
+            cursor: text;
+        }
+
+        select:hover,
+        input[type="file"]:hover,
+        button:hover {
+            transform: scale(1.05);
+            background-color: #f0f0f0;
+        }
+
+        button {
+            background: linear-gradient(to right, #00c6ff, #0072ff);
+            color: white;
+        }
+
+        button:hover {
+            background: linear-gradient(to right, #0072ff, #00c6ff);
+        }
+
+        #originalImage {
+            max-width: 90%;
+            max-height: 250px;
+            margin: 15px auto;
+            border: 3px dashed #fff;
+            display: none;
+            border-radius: 10px;
+        }
+
+        #info {
+            margin: 20px 0 10px 0;
+            font-weight: 600;
+            font-size: 16px;
+            display: flex;
+            justify-content: center;
+            gap: 25px;
+            flex-wrap: wrap;
+            color: #fff;
+            text-shadow: 1px 1px 2px #000;
+        }
+
+        #gameContainer {
+            display: flex;
+            gap: 30px;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        #puzzleContainer {
+            display: flex;
+            justify-content: center;
+        }
+
+        #puzzle {
+            display: grid;
+            gap: 3px;
+            margin: 20px auto;
+            border: 4px solid #fff;
+            background: #eee;
+            padding: 5px;
+            border-radius: 0;
+            transition: transform 0.5s ease, box-shadow 0.5s ease;
+        }
+
+        .tile {
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: border-color 0.3s ease, transform 0.2s ease;
+            background-repeat: no-repeat;
+            background-size: cover;
+            border-radius: 0;
+            user-select: none;
+            box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.2);
+        }
+
+        .tile:hover {
+            transform: scale(1.05);
+            border-color: #00c6ff;
+        }
+
+        .tile.selected {
+            border-color: #ffeb3b;
+            box-shadow: 0 0 10px #ffeb3b;
+        }
+
+        #puzzle.solved {
+            animation: solvedEffect 1s ease-out;
+        }
+
+        @keyframes solvedEffect {
+            0% {
+                transform: scale(1);
+                box-shadow: 0 0 0 rgba(0, 255, 0, 0);
+            }
+
+            50% {
+                transform: scale(1.05);
+                box-shadow: 0 0 25px rgba(0, 255, 0, 0.6);
+            }
+
+            100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 rgba(0, 255, 0, 0);
+            }
+        }
+
+        #leaderboard {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            min-width: 300px;
+            max-width: 400px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+        }
+
+        #leaderboard h3 {
+            margin: 0 0 15px 0;
+            color: #333;
+            font-size: 24px;
+            text-shadow: none;
+        }
+
+        #leaderboardList {
+            text-align: left;
+            margin: 0 auto;
+            padding: 0 0 0 1.5em;
+            font-size: 17px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            min-height: 40px;
+            max-width: 350px;
+            margin-top: 10px;
+        }
+
+        #leaderboardList li {
+            margin: 5px 0;
+            padding: 8px;
+            border-radius: 4px;
+            transition: background 0.3s ease;
+        }
+
+        #leaderboardList li:hover {
+            background: #e0f7fa;
+        }
+
+        .clear-leaderboard {
+            margin-top: 15px;
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s ease;
+        }
+
+        .clear-leaderboard:hover {
+            background: #e55656;
+        }
+
+        #nameModal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .modal-content h3 {
+            margin: 0 0 20px 0;
+            color: #333;
+        }
+
+        .modal-content input {
+            margin: 10px 0;
+            width: 100%;
+            max-width: 250px;
+        }
+
+        @media (max-width: 900px) {
+            #gameContainer {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .tile {
+                width: 60px !important;
+                height: 60px !important;
+            }
+
+            #controls {
+                flex-direction: column;
+            }
+
+            #puzzle {
+                transform: scale(0.9);
+            }
+
+            #leaderboard {
+                min-width: 280px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <h2>🧩 Let's Solve a Colorful Puzzle!</h2>
+
+    <div id="controls">
+        <select id="defaultImages">
+            <option value="">🔽 Choose Default Image</option>
+            <option
+                value="https://councils.forbes.com/profile/_next/image?url=https%3A%2F%2Fs3.amazonaws.com%2Fcco-avatars%2F2b1f20f6-ae6b-4362-a714-0f04ef7f3b27.png&w=384&q=75">
+                Bhaskar Gangipamula</option>
+            <!-- <option value="https://picsum.photos/seed/2/500">Nature 2</option>
+      <option value="https://images.pexels.com/photos/17908347/pexels-photo-17908347.jpeg">City</option> -->
+        </select>
+
+        <input type="file" id="imageUpload" accept="image/*" />
+
+        <select id="difficulty">
+            <option value="3">Easy (3x3)</option>
+            <option value="4">Medium (4x4)</option>
+            <option value="5" selected>Hard (5x5)</option>
+        </select>
+
+        <button id="shuffleBtn">🔀 Shuffle</button>
+        <button id="resetBtn">🔄 Reset</button>
+        <button id="toggleImageBtn">🖼️ Show Original</button>
+    </div>
+
+    <img id="originalImage" alt="Original Image Preview" />
+
+    <div id="info">
+        <span id="timer">⏱️ 00:00</span>
+        <span id="moveCounter">🔁 Moves: 0</span>
+    </div>
+
+    <div id="gameContainer">
+        <div id="puzzleContainer">
+            <div id="puzzle"></div>
+        </div>
+
+        <div id="leaderboard">
+            <h3>🏆 Leaderboard</h3>
+            <ol id="leaderboardList">
+                <li style="color:#888;">Loading...</li>
+            </ol>
+        </div>
+    </div>
+
+    <!-- Name Input Modal -->
+    <div id="nameModal">
+        <div class="modal-content">
+            <h3>🎉 Congratulations!</h3>
+            <p id="completionMessage"></p>
+            <input type="text" id="playerName" placeholder="Enter your name" maxlength="20" />
+            <div>
+                <button onclick="saveScore()">Save Score</button>
+                <button onclick="skipSave()" style="background: #666;">Skip</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const puzzle = document.getElementById('puzzle');
+        const imageUpload = document.getElementById('imageUpload');
+        const shuffleBtn = document.getElementById('shuffleBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const difficultySelect = document.getElementById('difficulty');
+        const timerDisplay = document.getElementById('timer');
+        const moveCounterDisplay = document.getElementById('moveCounter');
+        const toggleImageBtn = document.getElementById('toggleImageBtn');
+        const originalImage = document.getElementById('originalImage');
+        const defaultImages = document.getElementById('defaultImages');
+        const nameModal = document.getElementById('nameModal');
+        const playerNameInput = document.getElementById('playerName');
+        const completionMessage = document.getElementById('completionMessage');
+
+        let gridSize = 5;
+        const tileSize = 100;
+
+        let tiles = [];
+        let imageURL = '';
+        let selected = null;
+        let dragged = null;
+        let timerInterval = null;
+        let startTime = null;
+        let moveCounter = 0;
+        let currentTab = 'time';
+        let completionTime = 0;
+
+        // Leaderboard data
+        let leaderboards = {
+            time: JSON.parse(sessionStorage.getItem('timeLeaderboard') || '[]'),
+            moves: JSON.parse(sessionStorage.getItem('movesLeaderboard') || '[]')
+        };
+
+        const leaderboardEndpoint = 'https://script.google.com/macros/s/AKfycbx6Z76rVo0jnHWQKdSsIo0PjNSnw3bitjQjU_ORHrIPRhKUeFcpaCf4YLsaeMJ42TVYAA/exec';
+
+        // Submit player score to Google Sheets
+        async function submitScore(name, moves, time) {
+          try {
+            await fetch(leaderboardEndpoint, {
+              method: 'POST',
+              mode: 'no-cors', // optional: skip CORS errors for testing
+              headers:
+                {
+                  'Content-Type': 'application/json'
+                },
+              body: JSON.stringify({ name, moves, time })
+            });
+            console.log("Score submitted.");
+            fetchLeaderboard(); // refresh
+          } catch (error) {
+            console.error("Failed to submit score:", error);
+          }
+        }
+
+        // Submit player data to Google Sheet using fetch API
+        async function submitScoreToGoogleSheet(name, time, moves) {
+          await fetch("https://script.google.com/macros/s/AKfycbx6Z76rVo0jnHWQKdSsIo0PjNSnw3bitjQjU_ORHrIPRhKUeFcpaCf4YLsaeMJ42TVYAA/exec", {
+            method: "POST",
+            mode: "no-cors", // required for localhost without CORS error
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ name, time, moves })
+          });
+        }
+
+        // --- Leaderboard Sorting and Display ---
+        // Remove old leaderboard table and sort buttons if present
+        const leaderboardTable = document.getElementById('dynamicLeaderboardTable');
+        if (leaderboardTable) leaderboardTable.remove();
+        const leaderboardSortDiv = document.getElementById('leaderboardSortDiv');
+        if (leaderboardSortDiv) leaderboardSortDiv.remove();
+        // Remove any old leaderboard <tbody> if present
+        const oldTbody = document.getElementById('dynamicLeaderboardBody');
+        if (oldTbody && oldTbody.parentElement) oldTbody.parentElement.remove();
+
+        // Create <ol id="leaderboardList"> if not present
+        let leaderboardList = document.getElementById('leaderboardList');
+        if (!leaderboardList) {
+          leaderboardList = document.createElement('ol');
+          leaderboardList.id = 'leaderboardList';
+          leaderboardList.style.textAlign = 'left';
+          leaderboardList.style.margin = '0 auto';
+          leaderboardList.style.padding = '0 0 0 1.5em';
+          leaderboardList.style.fontSize = '17px';
+          leaderboardList.style.background = '#f8f9fa';
+          leaderboardList.style.borderRadius = '8px';
+          leaderboardList.style.minHeight = '40px';
+          leaderboardList.style.maxWidth = '350px';
+          leaderboardList.style.marginTop = '10px';
+          const leaderboardDiv = document.getElementById('leaderboard');
+          leaderboardDiv.appendChild(leaderboardList);
+        }
+
+        // Fetch, sort, and display leaderboard
+        async function fetchLeaderboard() {
+          const leaderboardList = document.getElementById('leaderboardList');
+          leaderboardList.innerHTML = '<li style="color:#888;">Loading...</li>';
+          try {
+            const res = await fetch('https://script.google.com/macros/s/AKfycbx6Z76rVo0jnHWQKdSsIo0PjNSnw3bitjQjU_ORHrIPRhKUeFcpaCf4YLsaeMJ42TVYAA/exec');
+            const data = await res.json();
+            // Defensive: filter out incomplete rows
+            const filtered = data.filter(row => (row.name || row.Name) && (row.time || row.Time) && (row.moves || row.Moves));
+            // Sort by time (number, ascending), then moves (ascending)
+            filtered.sort((a, b) => {
+              const tA = Number(a.time || a.Time);
+              const tB = Number(b.time || b.Time);
+              if (tA !== tB) return tA - tB;
+              return Number(a.moves || a.Moves) - Number(b.moves || b.Moves);
+            });
+            leaderboardList.innerHTML = '';
+            filtered.slice(0, 10).forEach((row, i) => {
+              const name = row.name || row.Name || 'Anonymous';
+              const time = Number(row.time || row.Time);
+              const moves = Number(row.moves || row.Moves);
+              leaderboardList.innerHTML += `<li>${i + 1}. ${name} - ⏱️ ${time}s, 🎯 ${moves} moves</li>`;
+            });
+            if (filtered.length === 0) {
+              leaderboardList.innerHTML = '<li style="color:#888;">No records yet.</li>';
+            }
+          } catch (err) {
+            leaderboardList.innerHTML = '<li style="color:#c00;">Failed to load leaderboard.</li>';
+          }
+        }
+
+        // Call fetchLeaderboard on page load
+        fetchLeaderboard();
+
+        function initPuzzle() {
+            gridSize = parseInt(difficultySelect.value);
+            puzzle.style.gridTemplateColumns = `repeat(${gridSize}, ${tileSize}px)`;
+            puzzle.innerHTML = '';
+            puzzle.classList.remove('solved');
+            tiles = [];
+            stopTimer();
+            startTimer();
+            moveCounter = 0;
+            updateMoveCounter();
+
+            for (let row = 0; row < gridSize; row++) {
+                for (let col = 0; col < gridSize; col++) {
+                    const tile = document.createElement('div');
+                    tile.classList.add('tile');
+                    tile.style.width = `${tileSize}px`;
+                    tile.style.height = `${tileSize}px`;
+
+                    tile.dataset.row = row;
+                    tile.dataset.col = col;
+                    tile.dataset.correctRow = row;
+                    tile.dataset.correctCol = col;
+
+                    tile.style.backgroundImage = `url(${imageURL})`;
+                    tile.style.backgroundPosition = `-${col * tileSize}px -${row * tileSize}px`;
+                    tile.style.backgroundSize = `${gridSize * tileSize}px ${gridSize * tileSize}px`;
+
+                    tile.draggable = true;
+                    tile.addEventListener('dragstart', dragStart);
+                    tile.addEventListener('dragover', dragOver);
+                    tile.addEventListener('drop', drop);
+                    tile.addEventListener('click', clickSelect);
+
+                    puzzle.appendChild(tile);
+                    tiles.push(tile);
+                }
+            }
+        }
+
+        function dragStart(e) {
+            dragged = e.target;
+        }
+
+        function dragOver(e) {
+            e.preventDefault();
+        }
+
+        function drop(e) {
+            e.preventDefault();
+            const target = e.target;
+            if (target && target !== dragged && target.classList.contains('tile')) {
+                swapTiles(dragged, target);
+                incrementMove();
+                checkCompletion();
+            }
+        }
+
+        function clickSelect(e) {
+            const tile = e.target;
+            if (!selected) {
+                selected = tile;
+                tile.classList.add('selected');
+            } else if (selected === tile) {
+                tile.classList.remove('selected');
+                selected = null;
+            } else {
+                swapTiles(selected, tile);
+                selected.classList.remove('selected');
+                selected = null;
+                incrementMove();
+                checkCompletion();
+            }
+        }
+
+        function swapTiles(tile1, tile2) {
+            const tempRow = tile1.dataset.row;
+            const tempCol = tile1.dataset.col;
+
+            tile1.dataset.row = tile2.dataset.row;
+            tile1.dataset.col = tile2.dataset.col;
+
+            tile2.dataset.row = tempRow;
+            tile2.dataset.col = tempCol;
+
+            const bg1 = tile1.style.backgroundPosition;
+            const bg2 = tile2.style.backgroundPosition;
+            tile1.style.backgroundPosition = bg2;
+            tile2.style.backgroundPosition = bg1;
+        }
+
+        // 🎉 Confetti celebration function
+        function launchConfettiCelebration() {
+          const duration = 3000;
+          const end = Date.now() + duration;
+          (function frame() {
+            confetti({
+              particleCount: 5,
+              angle: 60,
+              spread: 55,
+              origin: { x: 0 },
+            });
+            confetti({
+              particleCount: 5,
+              angle: 120,
+              spread: 55,
+              origin: { x: 1 },
+            });
+            if (Date.now() < end) {
+              requestAnimationFrame(frame);
+            }
+          })();
+        }
+
+        function checkCompletion() {
+            const solved = tiles.every(tile =>
+                tile.dataset.row === tile.dataset.correctRow &&
+                tile.dataset.col === tile.dataset.correctCol
+            );
+            if (solved) {
+                stopTimer();
+                puzzle.classList.add('solved');
+                completionTime = getElapsedSeconds();
+                launchConfettiCelebration();
+                setTimeout(() => {
+                    const playerName = prompt("🎉 You won! Enter your name:");
+                    if (playerName) {
+                        submitScore(playerName, moveCounter, completionTime);
+                    }
+                }, 400);
+            }
+        }
+
+        function getElapsedSeconds() {
+            if (!startTime) return 0;
+            return Math.floor((new Date() - startTime) / 1000);
+        }
+
+        function getDifficultyText() {
+            const difficulties = { '3': 'Easy', '4': 'Medium', '5': 'Hard' };
+            return difficulties[gridSize] || 'Unknown';
+        }
+
+        function saveScore() {
+            const name = playerNameInput.value.trim() || 'Anonymous';
+            const difficulty = getDifficultyText();
+
+            const scoreEntry = {
+                name: name,
+                difficulty: difficulty,
+                gridSize: gridSize,
+                time: completionTime,
+                moves: moveCounter,
+                date: new Date().toLocaleDateString()
+            };
+
+            // Add to both leaderboards
+            leaderboards.time.push(scoreEntry);
+            leaderboards.moves.push(scoreEntry);
+
+            // Sort and keep top 10
+            leaderboards.time.sort((a, b) => a.time - b.time).splice(10);
+            leaderboards.moves.sort((a, b) => a.moves - b.moves).splice(10);
+
+            // Save to session storage
+            sessionStorage.setItem('timeLeaderboard', JSON.stringify(leaderboards.time));
+            sessionStorage.setItem('movesLeaderboard', JSON.stringify(leaderboards.moves));
+
+            // Only use fetchAndDisplayLeaderboard for leaderboard display
+            fetchAndDisplayLeaderboard('time');
+            fetchAndDisplayLeaderboard('moves');
+
+            nameModal.style.display = 'none';
+            playerNameInput.value = '';
+
+            // Submit to Google Sheets leaderboard
+            submitScore(name, moveCounter, formatTime(completionTime));
+        }
+
+        function skipSave() {
+            nameModal.style.display = 'none';
+            playerNameInput.value = '';
+        }
+
+        function formatTime(seconds) {
+            const minutes = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function shuffleTiles() {
+            const positions = tiles.map(t => ({ row: t.dataset.row, col: t.dataset.col }));
+            for (let i = positions.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [positions[i], positions[j]] = [positions[j], positions[i]];
+            }
+            tiles.forEach((tile, index) => {
+                const pos = positions[index];
+                tile.dataset.row = pos.row;
+                tile.dataset.col = pos.col;
+                tile.style.backgroundPosition = `-${pos.col * tileSize}px -${pos.row * tileSize}px`;
+            });
+        }
+
+        function startTimer() {
+            clearInterval(timerInterval);
+            startTime = new Date();
+            timerInterval = setInterval(updateTimer, 1000);
+        }
+
+        function updateTimer() {
+            const now = new Date();
+            const elapsed = Math.floor((now - startTime) / 1000);
+            const minutes = String(Math.floor(elapsed / 60)).padStart(2, '0');
+            const seconds = String(elapsed % 60).padStart(2, '0');
+            timerDisplay.textContent = `⏱️ ${minutes}:${seconds}`;
+        }
+
+        function stopTimer() {
+            clearInterval(timerInterval);
+        }
+
+        function incrementMove() {
+            moveCounter++;
+            updateMoveCounter();
+        }
+
+        function updateMoveCounter() {
+            moveCounterDisplay.textContent = `🔁 Moves: ${moveCounter}`;
+        }
+
+        function saveToSheet(name, timeTaken, moves) {
+            fetch('https://script.google.com/macros/s/AKfycbx6Z76rVo0jnHWQKdSsIo0PjNSnw3bitjQjU_ORHrIPRhKUeFcpaCf4YLsaeMJ42TVYAA/exec', {
+                method: 'POST',
+                body: JSON.stringify({ name, time: timeTaken, moves }),
+                headers: { 'Content-Type': 'application/json' }
+            })
+                .then(res => res.json())
+                .then(data => {
+                    console.log('Saved:', data);
+                    fetchLeaderboard(); // Refresh leaderboard after save
+                })
+                .catch(err => console.error('Error saving:', err));
+        }
+
+        function fetchLeaderboard() {
+            fetch('https://script.google.com/macros/s/AKfycbx6Z76rVo0jnHWQKdSsIo0PjNSnw3bitjQjU_ORHrIPRhKUeFcpaCf4YLsaeMJ42TVYAA/exec')
+                .then(response => response.json())
+                .then(data => {
+                    const sorted = data.sort((a, b) => {
+                        const timeA = timeToSeconds(a.time);
+                        const timeB = timeToSeconds(b.time);
+                        return timeA - timeB || a.moves - b.moves;
+                    });
+
+                    const tbody = document.getElementById("leaderboardBody");
+                    tbody.innerHTML = "";
+                    sorted.slice(0, 10).forEach((row, i) => {
+                        const tr = document.createElement("tr");
+                        tr.innerHTML = `
+          <td>${i + 1}</td>
+          <td>${row.name}</td>
+          <td>${row.time}</td>
+          <td>${row.moves}</td>
+        `;
+                        tbody.appendChild(tr);
+                    });
+                });
+        }
+
+        toggleImageBtn.addEventListener('click', () => {
+            originalImage.style.display = originalImage.style.display === 'none' ? 'block' : 'none';
+        });
+
+        imageUpload.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function (event) {
+                imageURL = event.target.result;
+                originalImage.src = imageURL;
+                originalImage.style.display = 'none';
+                initPuzzle();
+                shuffleTiles();
+            };
+            reader.readAsDataURL(file);
+        });
+
+        defaultImages.addEventListener('change', () => {
+            if (defaultImages.value) {
+                imageURL = defaultImages.value;
+                originalImage.src = imageURL;
+                originalImage.style.display = 'none';
+                initPuzzle();
+                shuffleTiles();
+            }
+        });
+
+        shuffleBtn.addEventListener('click', () => {
+            if (tiles.length) {
+                shuffleTiles();
+                startTimer();
+                moveCounter = 0;
+                updateMoveCounter();
+            }
+        });
+
+        resetBtn.addEventListener('click', () => {
+            if (imageURL) {
+                initPuzzle();
+                shuffleTiles();
+            } else {
+                alert("Please upload or select an image.");
+            }
+        });
+
+        difficultySelect.addEventListener('change', () => {
+            if (imageURL) {
+                initPuzzle();
+                shuffleTiles();
+            }
+        });
+
+        // Initialize leaderboards on page load
+        // updateLeaderboards();
+        // Fetch Google Sheets leaderboard on page load
+        fetchLeaderboard();
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+</body>
+
+</html>
