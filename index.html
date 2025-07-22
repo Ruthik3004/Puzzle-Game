@@ -329,11 +329,12 @@
             <div id="puzzle"></div>
         </div>
 
+        <!-- Leaderboard container -->
         <div id="leaderboard">
-            <h3>🏆 Leaderboard</h3>
-            <ol id="leaderboardList">
-                <li style="color:#888;">Loading...</li>
-            </ol>
+          <h3>🏆 Leaderboard</h3>
+          <ol id="leaderboardList">
+            <li style="color:#888">Loading…</li>
+          </ol>
         </div>
     </div>
 
@@ -351,6 +352,12 @@
     </div>
 
     <script>
+        // -------------------------------
+        // CONFIG – put the Web-App URL here
+        // -------------------------------
+        const leaderboardEndpoint =
+          'https://script.google.com/macros/s/AKfycbyvUyJuG5LWqfQWk5Al3FmCjy7gMtMEB8rVf-E8jsGu0oT95iL87VERGWakMGgvogb7Lg/exec';
+
         const puzzle = document.getElementById('puzzle');
         const imageUpload = document.getElementById('imageUpload');
         const shuffleBtn = document.getElementById('shuffleBtn');
@@ -384,119 +391,54 @@
             moves: JSON.parse(sessionStorage.getItem('movesLeaderboard') || '[]')
         };
 
-        const leaderboardEndpoint = 'https://script.google.com/macros/s/AKfycbx6Z76rVo0jnHWQKdSsIo0PjNSnw3bitjQjU_ORHrIPRhKUeFcpaCf4YLsaeMJ42TVYAA/exec';
+        // -------------------------------
+        // 1. Fetch & render leaderboard
+        // -------------------------------
+        async function fetchLeaderboard() {
+          const list = document.getElementById('leaderboardList');
+          list.innerHTML = '<li style="color:#888">Loading…</li>';
+          try {
+            const res  = await fetch(leaderboardEndpoint);
+            const data = await res.json();   // [{name,time,moves}, …]
 
-        // Submit player score to Google Sheets
+            // sort: fastest time first, then lowest moves
+            data.sort((a,b)=> a.time - b.time || a.moves - b.moves);
+
+            list.innerHTML = '';
+            data.slice(0,10).forEach((row,i)=>{
+              list.insertAdjacentHTML(
+                'beforeend',
+                `<li>${i+1}. ${row.name} – ⏱️ ${row.time}s, 🎯 ${row.moves} moves</li>`
+              );
+            });
+            if (!data.length) list.innerHTML = '<li style="color:#888">No scores yet.</li>';
+          } catch (err) {
+            list.innerHTML = '<li style="color:#c00">Failed to load leaderboard.</li>';
+            console.error(err);
+          }
+        }
+
+        // -------------------------------
+        // 2. Submit a new score
+        // -------------------------------
         async function submitScore(name, moves, time) {
           try {
             await fetch(leaderboardEndpoint, {
-              method: 'POST',
-              mode: 'no-cors', // optional: skip CORS errors for testing
-              headers:
-                {
-                  'Content-Type': 'application/json'
-                },
-              body: JSON.stringify({ name, moves, time })
+              method : 'POST',
+              body   : JSON.stringify({ name, moves, time }),
+              headers: { 'Content-Type': 'application/json' }
             });
-            console.log("Score submitted.");
-            fetchLeaderboard(); // refresh
-          } catch (error) {
-            console.error("Failed to submit score:", error);
-          }
-        }
-
-        // Submit player data to Google Sheet using fetch API
-        async function submitScoreToGoogleSheet(name, time, moves) {
-          await fetch("https://script.google.com/macros/s/AKfycbx6Z76rVo0jnHWQKdSsIo0PjNSnw3bitjQjU_ORHrIPRhKUeFcpaCf4YLsaeMJ42TVYAA/exec", {
-            method: "POST",
-            mode: "no-cors", // required for localhost without CORS error
-            headers: {
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify({ name, time, moves })
-          });
-        }
-
-        // --- Leaderboard Sorting and Display ---
-        // Remove old leaderboard table and sort buttons if present
-        const leaderboardTable = document.getElementById('dynamicLeaderboardTable');
-        if (leaderboardTable) leaderboardTable.remove();
-        const leaderboardSortDiv = document.getElementById('leaderboardSortDiv');
-        if (leaderboardSortDiv) leaderboardSortDiv.remove();
-        // Remove any old leaderboard <tbody> if present
-        const oldTbody = document.getElementById('dynamicLeaderboardBody');
-        if (oldTbody && oldTbody.parentElement) oldTbody.parentElement.remove();
-
-        // Create <ol id="leaderboardList"> if not present
-        let leaderboardList = document.getElementById('leaderboardList');
-        if (!leaderboardList) {
-          leaderboardList = document.createElement('ol');
-          leaderboardList.id = 'leaderboardList';
-          leaderboardList.style.textAlign = 'left';
-          leaderboardList.style.margin = '0 auto';
-          leaderboardList.style.padding = '0 0 0 1.5em';
-          leaderboardList.style.fontSize = '17px';
-          leaderboardList.style.background = '#f8f9fa';
-          leaderboardList.style.borderRadius = '8px';
-          leaderboardList.style.minHeight = '40px';
-          leaderboardList.style.maxWidth = '350px';
-          leaderboardList.style.marginTop = '10px';
-          const leaderboardDiv = document.getElementById('leaderboard');
-          leaderboardDiv.appendChild(leaderboardList);
-        }
-
-        // Fetch, sort, and display leaderboard
-        async function fetchLeaderboard() {
-          const leaderboardList = document.getElementById('leaderboardList');
-          leaderboardList.innerHTML = '<li style="color:#888;">Loading...</li>';
-          try {
-            const res = await fetch('https://script.google.com/macros/s/AKfycbx6Z76rVo0jnHWQKdSsIo0PjNSnw3bitjQjU_ORHrIPRhKUeFcpaCf4YLsaeMJ42TVYAA/exec');
-            let data;
-            try {
-              data = await res.json();
-            } catch (jsonErr) {
-              console.error('Failed to parse leaderboard JSON:', jsonErr);
-              leaderboardList.innerHTML = '<li style="color:#c00;">Leaderboard data is not valid JSON.<br>Check Google Apps Script permissions and CORS settings.</li>';
-              return;
-            }
-            // If the data is wrapped in a property (e.g. {data: [...]})
-            if (data && typeof data === 'object' && !Array.isArray(data)) {
-              const keys = Object.keys(data);
-              if (keys.length === 1 && Array.isArray(data[keys[0]])) {
-                data = data[keys[0]];
-              }
-            }
-            // Debug: log the data and the first row's keys
-            console.log('Leaderboard raw data:', data);
-            if (Array.isArray(data) && data.length > 0) {
-              console.log('First row keys:', Object.keys(data[0]));
-            }
-            // Defensive: filter out incomplete rows
-            const filtered = (Array.isArray(data) ? data : []).filter(row => (row.Name || row.name || row["Name"] || row["name"]) && (row.Time || row.time || row["Time"] || row["time"]) && (row.Moves || row.moves || row["Moves"] || row["moves"]));
-            // Sort by time (number, ascending), then moves (ascending)
-            filtered.sort((a, b) => {
-              const tA = Number(a.Time || a.time || a["Time"] || a["time"]);
-              const tB = Number(b.Time || b.time || b["Time"] || b["time"]);
-              if (tA !== tB) return tA - tB;
-              return Number(a.Moves || a.moves || a["Moves"] || a["moves"]) - Number(b.Moves || b.moves || b["Moves"] || b["moves"]);
-            });
-            leaderboardList.innerHTML = '';
-            filtered.slice(0, 10).forEach((row, i) => {
-              const name = row.Name || row.name || row["Name"] || row["name"] || 'Anonymous';
-              const time = Number(row.Time || row.time || row["Time"] || row["time"]);
-              const moves = Number(row.Moves || row.moves || row["Moves"] || row["moves"]);
-              leaderboardList.innerHTML += `<li>${i + 1}. ${name} - ⏱️ ${time}s, 🎯 ${moves} moves</li>`;
-            });
-            if (filtered.length === 0) {
-              leaderboardList.innerHTML = '<li style="color:#888;">No valid leaderboard data found. Check console for details.</li>';
-            }
           } catch (err) {
-            leaderboardList.innerHTML = '<li style="color:#c00;">Failed to load leaderboard.<br>' + err + '</li>';
+            console.error('Score not saved:', err);
           }
+          // refresh list
+          fetchLeaderboard();
         }
 
-        // Call fetchLeaderboard on page load
-        fetchLeaderboard();
+        // -------------------------------
+        // 3. Auto-load on page load
+        // -------------------------------
+        window.addEventListener('load', fetchLeaderboard);
 
         function initPuzzle() {
             gridSize = parseInt(difficultySelect.value);
@@ -794,11 +736,6 @@
                 shuffleTiles();
             }
         });
-
-        // Initialize leaderboards on page load
-        // updateLeaderboards();
-        // Fetch Google Sheets leaderboard on page load
-        fetchLeaderboard();
     </script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
 </body>
